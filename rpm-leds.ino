@@ -2,23 +2,20 @@ const int latchPin = 8;
 const int clockPin = 13;
 const int dataPin  = 11;
 
-const int n_leds = 8;
-
-int numOfRegisters = 1;
-byte* registerState;
-
-byte byteRead;
-int led_value = 0;
+byte leds[8] = {};
+byte led_data = 0x00;
 int value = 0;
 
+int power(int value, int exponent) {
+  return 0.5 + pow(value, exponent);
+}
+
 void setup() {
-  //Initialize array
-  registerState = new byte[numOfRegisters];
-  for (size_t i = 0; i < numOfRegisters; i++) {
-    registerState[i] = 0;
+  // Fill leds byte array
+  for (size_t i = 1; i <= 8; i++) {
+    leds[i - 1] = power(2, i) - 1;
   }
 
-  //set pins to output so you can control the shift register
   pinMode(latchPin, OUTPUT);
   pinMode(clockPin, OUTPUT);
   pinMode(dataPin, OUTPUT);
@@ -27,10 +24,12 @@ void setup() {
 
 void loop() {
   while(true) {
+    led_data = 0x00;
     if (Serial.available()) {
+      // [-1, 1, 2, 3, 4, 5, 6, 7, 8]
       value = Serial.parseInt();
       if (value != 0) {
-        led_value = value;
+        led_data = leds[value - 1];
       }
     }
     display();
@@ -38,15 +37,7 @@ void loop() {
 }
 
 void display() {
-  for (int k = 0; k < n_leds; k++){
-    regWrite(k, k <= led_value - 1 ? HIGH : LOW);
-  }
-}
-
-void regWrite(int pin, bool state){
   digitalWrite(latchPin, LOW);
-  byte* states = &registerState[0];
-  bitWrite(*states, pin, state);
-  shiftOut(dataPin, clockPin, MSBFIRST, *states);
+  shiftOut(dataPin, clockPin, MSBFIRST, led_data);
   digitalWrite(latchPin, HIGH);
 }
